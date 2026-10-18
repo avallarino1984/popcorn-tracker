@@ -1,0 +1,217 @@
+@page "/sortie/nouvelle"
+@page "/sortie/{Id:guid}"
+@inject OutingService Outings
+@inject NavigationManager Nav
+@inject IJSRuntime Js
+
+<PageTitle>@(IsNew ? "Nouvelle sortie" : "Modifier la sortie")</PageTitle>
+
+<div class="page-head">
+    <a class="back" href="" aria-label="Retour">←</a>
+    <h1>@(IsNew ? "Nouvelle sortie" : "Modifier la sortie")</h1>
+</div>
+
+@if (_loading)
+{
+    <div class="skeleton card-skel"></div>
+    <div class="skeleton card-skel"></div>
+}
+else if (_loadError is not null)
+{
+    <div class="empty-state">
+        <div class="empty-emoji">🎞️</div>
+        <p class="muted">@_loadError</p>
+        <a class="btn primary" href="">Retour</a>
+    </div>
+}
+else
+{
+    <form class="editor" @onsubmit="SaveAsync" @onsubmit:preventDefault="true">
+
+        <section class="field-card">
+            <div class="field-label"><span>📅</span> Date</div>
+            <input class="input" type="date" @bind="_date" required />
+        </section>
+
+        <section class="field-card">
+            <div class="field-label"><span>🎬</span> Film</div>
+            @if (_movie is not null && !_changingMovie)
+            {
+                <div class="movie-selected">
+                    @if (_movie.PosterUrl is not null)
+                    {
+                        <img src="@_movie.PosterUrl" alt="" />
+                    }
+                    else
+                    {
+                        <div class="poster-fallback">🎬</div>
+                    }
+                    <div class="movie-selected-body">
+                        <div class="movie-selected-title">@_movie.Title</div>
+                        <button type="button" class="btn ghost small" @onclick="() => _changingMovie = true">Changer</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <MovieSearch OnPicked="OnMoviePicked" InitialQuery="@_movie?.Title" />
+            }
+        </section>
+
+        <section class="field-card">
+            <div class="field-label"><span>🎟️</span> Entrées payées par</div>
+            <PersonPicker People="_people" @bind-Value="_ticketsPaidBy" />
+        </section>
+
+        <section class="field-card">
+            <div class="field-label"><span>🍿</span> Popcorn payé par</div>
+            <PersonPicker People="_people" @bind-Value="_popcornPaidBy" />
+        </section>
+
+        <section class="field-card">
+            <div class="field-label"><span>📝</span> Note <small>(optionnel)</small></div>
+            <textarea class="input" rows="2" placeholder="Ex. : salle 3, trop bon!" @bind="_notes"></textarea>
+        </section>
+
+        @if (_saveError is not null)
+        {
+            <p class="hint error">@_saveError</p>
+        }
+
+        <div class="editor-actions">
+            <button type="submit" class="btn primary wide" disabled="@(_saving || _movie is null)">
+                @(_saving ? "Enregistrement…" : IsNew ? "Enregistrer la sortie" : "Enregistrer les changements")
+            </button>
+            @if (!IsNew)
+            {
+                <button type="button" class="btn danger" @onclick="DeleteAsync" disabled="@_saving">Supprimer</button>
+            }
+        </div>
+    </form>
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private bool IsNew => Id is null;
+
+    private bool _loading = true;
+    private bool _saving;
+    private bool _changingMovie;
+    private string? _loadError;
+    private string? _saveError;
+
+    private List<Person> _people = [];
+    private DateOnly _date = DateOnly.FromDateTime(DateTime.Today);
+    private MovieChoice? _movie;
+    private Guid? _ticketsPaidBy;
+    private Guid? _popcornPaidBy;
+    private string? _notes;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _loadError = null;
+
+        try
+        {
+            _people = await Outings.GetPeopleAsync();
+
+            if (IsNew)
+            {
+                // Pre-fill payers from the rotation so the common case is one tap
+                var history = await Outings.GetOutingsAsync();
+                var next = PaymentRotation.Suggest(_people, history);
+                _ticketsPaidBy = next.Tickets;
+                _popcornPaidBy = next.Popcorn;
+            }
+            else
+            {
+                var outing = await Outings.GetOutingAsync(Id!.Value);
+                if (outing is null)
+                {
+                    _loadError = "Cette sortie n'existe plus.";
+                    return;
+                }
+
+                _date = outing.Date;
+                _movie = new MovieChoice(outing.MovieTitle, outing.PosterUrl, outing.TmdbId);
+                _ticketsPaidBy = outing.TicketsPaidBy;
+                _popcornPaidBy = outing.PopcornPaidBy;
+                _notes = outing.Notes;
+            }
+        }
+        catch (Exception ex)
+        {
+            _loadError = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OnMoviePicked(MovieChoice movie)
+    {
+        _movie = movie;
+        _changingMovie = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_movie is null || string.IsNullOrWhiteSpace(_movie.Title))
+        {
+            _saveError = "Choisis un film d'abord.";
+            return;
+        }
+
+        _saving = true;
+        _saveError = null;
+
+        try
+        {
+            var outing = new Outing
+            {
+                Id = Id ?? Guid.Empty,
+                Date = _date,
+                MovieTitle = _movie.Title.Trim(),
+                PosterUrl = _movie.PosterUrl,
+                TmdbId = _movie.TmdbId,
+                TicketsPaidBy = _ticketsPaidBy,
+                PopcornPaidBy = _popcornPaidBy,
+                Notes = string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim(),
+            };
+
+            await Outings.SaveOutingAsync(outing);
+            Nav.NavigateTo("");
+        }
+        catch (Exception ex)
+        {
+            _saveError = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (Id is null || !await Js.InvokeAsync<bool>("confirm", "Supprimer cette sortie?"))
+        {
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            await Outings.DeleteOutingAsync(Id.Value);
+            Nav.NavigateTo("");
+        }
+        catch (Exception ex)
+        {
+            _saveError = ex.Message;
+            _saving = false;
+        }
+    }
+}

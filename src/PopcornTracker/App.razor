@@ -1,0 +1,15 @@
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+    </Found>
+    <NotFound>
+        <PageTitle>Introuvable</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <div class="empty-state">
+                <div class="empty-emoji">🎞️</div>
+                <h2>Cette scène a été coupée au montage</h2>
+                <a class="btn primary" href="">Retour aux sorties</a>
+            </div>
+        </LayoutView>
+    </NotFound>
+</Router>

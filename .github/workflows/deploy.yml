@@ -1,0 +1,72 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  PROJECT_DIR: src/PopcornTracker
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Must happen BEFORE publish: the service worker manifest stores a hash of
+      # every file, so editing files afterwards would break offline install.
+      - name: Write runtime config from secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: |
+          jq --arg url "$SUPABASE_URL" --arg key "$SUPABASE_ANON_KEY" --arg tmdb "$TMDB_API_KEY" \
+            '.Supabase.Url = $url | .Supabase.AnonKey = $key | .Tmdb.ApiKey = $tmdb' \
+            "$PROJECT_DIR/wwwroot/appsettings.json" > appsettings.tmp
+          mv appsettings.tmp "$PROJECT_DIR/wwwroot/appsettings.json"
+
+      - name: Set base href for the repository sub-path
+        run: |
+          sed -i 's|<base href="/" />|<base href="/${{ github.event.repository.name }}/" />|' \
+            "$PROJECT_DIR/wwwroot/index.html"
+
+      - name: Publish
+        run: dotnet publish "$PROJECT_DIR/PopcornTracker.csproj" -c Release -o release
+
+      # 404.html lets GitHub Pages serve the SPA for deep links (/sortie/...);
+      # .nojekyll keeps the _framework folder from being ignored.
+      - name: Prepare Pages output
+        run: |
+          cp release/wwwroot/index.html release/wwwroot/404.html
+          touch release/wwwroot/.nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: release/wwwroot
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

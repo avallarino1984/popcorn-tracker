@@ -1,0 +1,18 @@
+{
+  "name": "Popcorn Tracker",
+  "short_name": "Popcorn",
+  "description": "Qui a payé les entrées et le popcorn à la dernière sortie au cinéma.",
+  "lang": "fr-CA",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0e0b12",
+  "theme_color": "#0e0b12",
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "icon-512.png", "type": "image/png", "sizes": "512x512" },
+    { "src": "icon-maskable-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,160 @@
+@page "/personnes"
+@inject OutingService Outings
+@inject IJSRuntime Js
+
+<PageTitle>Personnes</PageTitle>
+
+<div class="page-head">
+    <a class="back" href="" aria-label="Retour">←</a>
+    <h1>Personnes</h1>
+</div>
+
+<p class="muted lead">
+    L'ordre de la liste définit la rotation : chacun paie à tour de rôle, pour les entrées comme pour le popcorn.
+</p>
+
+@if (_loading)
+{
+    <div class="skeleton card-skel"></div>
+}
+else
+{
+    <div class="people-list">
+        @for (var i = 0; i < _people.Count; i++)
+        {
+            var index = i;
+            var person = _people[index];
+            <div class="person-row" @key="person.Id">
+                <Avatar Person="person" />
+                <input class="input person-name"
+                       value="@person.Name"
+                       aria-label="Nom"
+                       @onchange="e => RenameAsync(person, e.Value?.ToString())" />
+                <div class="row-actions">
+                    <button type="button" class="icon-btn" disabled="@(index == 0)" aria-label="Monter"
+                            @onclick="() => MoveAsync(index, -1)">↑</button>
+                    <button type="button" class="icon-btn" disabled="@(index == _people.Count - 1)" aria-label="Descendre"
+                            @onclick="() => MoveAsync(index, 1)">↓</button>
+                    <button type="button" class="icon-btn danger" aria-label="Supprimer"
+                            @onclick="() => DeleteAsync(person)">✕</button>
+                </div>
+                <div class="swatches">
+                    @foreach (var color in Palette)
+                    {
+                        <button type="button"
+                                class="swatch @(string.Equals(color, person.Color, StringComparison.OrdinalIgnoreCase) ? "selected" : "")"
+                                style="--swatch:@color"
+                                aria-label="Couleur @color"
+                                @onclick="() => RecolorAsync(person, color)"></button>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <form class="add-person" @onsubmit="AddAsync" @onsubmit:preventDefault="true">
+        <input class="input" placeholder="Nom de la personne" @bind="_newName" @bind:event="oninput" />
+        <button type="submit" class="btn primary" disabled="@(string.IsNullOrWhiteSpace(_newName))">Ajouter</button>
+    </form>
+
+    @if (_error is not null)
+    {
+        <p class="hint error">@_error</p>
+    }
+}
+
+@code {
+    private static readonly string[] Palette =
+        ["#ffc94d", "#ff5d73", "#5ad1ff", "#9b8cff", "#5fe3a1", "#ff9f43"];
+
+    private bool _loading = true;
+    private string? _error;
+    private string _newName = string.Empty;
+    private List<Person> _people = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RunAsync(async () => _people = await Outings.GetPeopleAsync());
+        _loading = false;
+    }
+
+    private Task AddAsync() => RunAsync(async () =>
+    {
+        var name = _newName.Trim();
+        if (name.Length == 0)
+        {
+            return;
+        }
+
+        var color = Palette[_people.Count % Palette.Length];
+        var nextOrder = _people.Count == 0 ? 0 : _people.Max(p => p.SortOrder) + 1;
+        var person = new Person { Name = name, Color = color, SortOrder = nextOrder };
+        _people.Add(await Outings.AddPersonAsync(person));
+        _newName = string.Empty;
+    });
+
+    private Task RenameAsync(Person person, string? name) => RunAsync(async () =>
+    {
+        name = name?.Trim();
+        if (string.IsNullOrEmpty(name) || name == person.Name)
+        {
+            return;
+        }
+
+        person.Name = name;
+        await Save(person);
+    });
+
+    private Task RecolorAsync(Person person, string color) => RunAsync(async () =>
+    {
+        person.Color = color;
+        await Save(person);
+    });
+
+    private Task MoveAsync(int index, int delta) => RunAsync(async () =>
+    {
+        var target = index + delta;
+        if (target < 0 || target >= _people.Count)
+        {
+            return;
+        }
+
+        (_people[index], _people[target]) = (_people[target], _people[index]);
+
+        // Re-number everything so the order is always clean and unique
+        for (var i = 0; i < _people.Count; i++)
+        {
+            if (_people[i].SortOrder != i)
+            {
+                _people[i].SortOrder = i;
+                await Save(_people[i]);
+            }
+        }
+    });
+
+    private Task DeleteAsync(Person person) => RunAsync(async () =>
+    {
+        if (!await Js.InvokeAsync<bool>("confirm", $"Supprimer {person.Name}? Ses sorties passées resteront, sans nom."))
+        {
+            return;
+        }
+
+        await Outings.DeletePersonAsync(person.Id);
+        _people.Remove(person);
+    });
+
+    private Task Save(Person person) => Outings.UpdatePersonAsync(person);
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        _error = null;
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+}

@@ -1,0 +1,10 @@
+@* Colored circle with the person's initial *@
+<span class="avatar @(Small ? "avatar-sm" : "")" style="--avatar:@(Person?.Color ?? "#55505f")" title="@Person?.Name">
+    @(Person?.Initial ?? "?")
+</span>
+
+@code {
+    [Parameter] public Person? Person { get; set; }
+
+    [Parameter] public bool Small { get; set; }
+}

@@ -1,0 +1,45 @@
+@* Ticket-stub style card for one outing *@
+<a class="ticket @(Featured ? "featured" : "")" href="sortie/@Outing.Id">
+    @if (Featured && Outing.PosterUrl is not null)
+    {
+        <div class="ticket-backdrop" style="background-image:url('@Outing.PosterUrl')"></div>
+    }
+
+    <div class="ticket-poster">
+        @if (Outing.PosterUrl is not null)
+        {
+            <img src="@Outing.PosterUrl" alt="Affiche de @Outing.MovieTitle" loading="lazy" />
+        }
+        else
+        {
+            <div class="poster-fallback">🎬</div>
+        }
+    </div>
+
+    <div class="ticket-body">
+        <div class="ticket-date">@Outing.Date.ToString(Featured ? "dddd d MMMM yyyy" : "d MMM yyyy")</div>
+        <div class="ticket-title">@Outing.MovieTitle</div>
+
+        <div class="ticket-payers">
+            <PayerLine Emoji="🎟️" Label="Entrées" Person="@Find(Outing.TicketsPaidBy)" />
+            <PayerLine Emoji="🍿" Label="Popcorn" Person="@Find(Outing.PopcornPaidBy)" />
+        </div>
+
+        @if (Featured && !string.IsNullOrWhiteSpace(Outing.Notes))
+        {
+            <p class="ticket-notes">« @Outing.Notes »</p>
+        }
+    </div>
+
+    <div class="ticket-stub" aria-hidden="true"></div>
+</a>
+
+@code {
+    [Parameter, EditorRequired] public Outing Outing { get; set; } = default!;
+
+    [Parameter, EditorRequired] public IReadOnlyList<Person> People { get; set; } = [];
+
+    [Parameter] public bool Featured { get; set; }
+
+    private Person? Find(Guid? id) => id is null ? null : People.FirstOrDefault(p => p.Id == id);
+}

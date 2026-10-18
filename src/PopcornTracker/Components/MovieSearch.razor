@@ -1,0 +1,154 @@
+@implements IDisposable
+@inject TmdbService Tmdb
+
+@* Movie picker: "now playing" by default, TMDB search while typing, manual title fallback *@
+<div class="movie-search">
+    <label class="search-field">
+        <span aria-hidden="true">🔎</span>
+        <input type="search"
+               placeholder="Titre du film…"
+               value="@_query"
+               @oninput="OnInputAsync"
+               autocomplete="off" />
+    </label>
+
+    @if (!string.IsNullOrWhiteSpace(_query))
+    {
+        <button type="button" class="manual-pick" @onclick="PickManualAsync">
+            Utiliser « @_query.Trim() » sans affiche
+        </button>
+    }
+
+    @if (!Tmdb.IsConfigured)
+    {
+        <p class="hint">Ajoute une clé TMDB dans la config pour avoir la recherche et les affiches.</p>
+    }
+    else
+    {
+        <div class="list-label">
+            @(string.IsNullOrWhiteSpace(_query) ? "À l'affiche au Canada" : "Résultats")
+            @if (_busy)
+            {
+                <span class="spinner" aria-label="Chargement"></span>
+            }
+        </div>
+
+        @if (_error is not null)
+        {
+            <p class="hint error">@_error</p>
+        }
+        else if (!_busy && _results.Count == 0 && !string.IsNullOrWhiteSpace(_query))
+        {
+            <p class="hint">Aucun film trouvé. Utilise le titre manuel ci-dessus.</p>
+        }
+
+        <div class="poster-grid">
+            @foreach (var movie in _results)
+            {
+                var poster = TmdbService.PosterUrl(movie.PosterPath, "w185");
+                <button type="button" class="poster-pick" @onclick="() => PickAsync(movie)">
+                    @if (poster is not null)
+                    {
+                        <img src="@poster" alt="" loading="lazy" />
+                    }
+                    else
+                    {
+                        <div class="poster-fallback">🎬</div>
+                    }
+                    <span class="poster-title">@movie.Title</span>
+                    @if (!string.IsNullOrEmpty(movie.Year))
+                    {
+                        <span class="poster-year">@movie.Year</span>
+                    }
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int DebounceMs = 350;
+    private const int MaxResults = 12;
+
+    [Parameter] public EventCallback<MovieChoice> OnPicked { get; set; }
+
+    [Parameter] public string? InitialQuery { get; set; }
+
+    private string _query = string.Empty;
+    private List<TmdbMovie> _results = [];
+    private bool _busy;
+    private string? _error;
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _query = InitialQuery ?? string.Empty;
+        await LoadAsync(CancellationToken.None);
+    }
+
+    private async Task OnInputAsync(ChangeEventArgs e)
+    {
+        _query = e.Value?.ToString() ?? string.Empty;
+
+        // Restart the debounce window on every keystroke
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
+
+        try
+        {
+            await Task.Delay(DebounceMs, token);
+            await LoadAsync(token);
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer keystroke superseded this search
+        }
+    }
+
+    private async Task LoadAsync(CancellationToken token)
+    {
+        if (!Tmdb.IsConfigured)
+        {
+            return;
+        }
+
+        _busy = true;
+        _error = null;
+        StateHasChanged();
+
+        try
+        {
+            var movies = string.IsNullOrWhiteSpace(_query)
+                ? await Tmdb.NowPlayingAsync(token)
+                : await Tmdb.SearchAsync(_query, token);
+            _results = movies.Take(MaxResults).ToList();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _results = [];
+            _error = $"Recherche impossible : {ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private Task PickAsync(TmdbMovie movie) =>
+        OnPicked.InvokeAsync(new MovieChoice(movie.Title, TmdbService.PosterUrl(movie.PosterPath), movie.Id));
+
+    private Task PickManualAsync() =>
+        OnPicked.InvokeAsync(new MovieChoice(_query.Trim(), null, null));
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+    }
+}

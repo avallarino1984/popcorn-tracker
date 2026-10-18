@@ -1,0 +1,21 @@
+@* "🎟️ Entrées — [avatar] Name" line *@
+<div class="payer">
+    <span class="payer-emoji" aria-hidden="true">@Emoji</span>
+    <span class="payer-label">@Label</span>
+    @if (Person is not null)
+    {
+        <span class="payer-who"><Avatar Person="Person" Small="true" />@Person.Name</span>
+    }
+    else
+    {
+        <span class="payer-who muted">—</span>
+    }
+</div>
+
+@code {
+    [Parameter] public string Emoji { get; set; } = string.Empty;
+
+    [Parameter] public string Label { get; set; } = string.Empty;
+
+    [Parameter] public Person? Person { get; set; }
+}

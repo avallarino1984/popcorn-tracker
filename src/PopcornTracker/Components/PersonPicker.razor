@@ -1,0 +1,35 @@
+@* Single-select chip list of people; supports @bind-Value *@
+<div class="picker" role="radiogroup">
+    @foreach (var person in People)
+    {
+        var selected = person.Id == Value;
+        <button type="button"
+                class="chip @(selected ? "selected" : "")"
+                style="--chip:@person.Color"
+                role="radio"
+                aria-checked="@(selected ? "true" : "false")"
+                @onclick="() => SelectAsync(person.Id)">
+            <Avatar Person="person" Small="true" />
+            <span>@person.Name</span>
+        </button>
+    }
+    <button type="button"
+            class="chip chip-none @(Value is null ? "selected" : "")"
+            @onclick="() => SelectAsync(null)">
+        Personne
+    </button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Person> People { get; set; } = [];
+
+    [Parameter] public Guid? Value { get; set; }
+
+    [Parameter] public EventCallback<Guid?> ValueChanged { get; set; }
+
+    private async Task SelectAsync(Guid? id)
+    {
+        Value = id;
+        await ValueChanged.InvokeAsync(id);
+    }
+}

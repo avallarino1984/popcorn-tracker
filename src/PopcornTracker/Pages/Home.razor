@@ -1,0 +1,128 @@
+@page "/"
+@inject OutingService Outings
+@inject AppConfig Config
+
+<PageTitle>Popcorn Tracker</PageTitle>
+
+@if (_loading)
+{
+    <div class="skeleton hero-skel"></div>
+    <div class="skeleton card-skel"></div>
+    <div class="skeleton card-skel"></div>
+}
+else if (_error is not null)
+{
+    <div class="empty-state">
+        <div class="empty-emoji">📡</div>
+        <h2>Impossible de charger les sorties</h2>
+        <p class="muted">@_error</p>
+        <button class="btn primary" @onclick="LoadAsync">Réessayer</button>
+    </div>
+}
+else if (_people.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-emoji">👋</div>
+        <h2>Bienvenue!</h2>
+        <p class="muted">Commence par ajouter les personnes qui vont au cinéma ensemble.</p>
+        <a class="btn primary" href="personnes">Ajouter des personnes</a>
+    </div>
+}
+else
+{
+    <section class="next-card">
+        <div class="eyebrow">Prochaine sortie · c'est au tour de</div>
+        <div class="next-grid">
+            <div class="next-item">
+                <span class="next-emoji">🎟️</span>
+                <span class="next-label">Entrées</span>
+                <span class="next-who"><Avatar Person="@Find(_next.Tickets)" />@Find(_next.Tickets)?.Name</span>
+            </div>
+            <div class="next-item">
+                <span class="next-emoji">🍿</span>
+                <span class="next-label">Popcorn</span>
+                <span class="next-who"><Avatar Person="@Find(_next.Popcorn)" />@Find(_next.Popcorn)?.Name</span>
+            </div>
+        </div>
+        <div class="next-actions">
+            <a class="btn primary" href="sortie/nouvelle">🎬 Nouvelle sortie</a>
+            @if (!string.IsNullOrWhiteSpace(Config.CinemaScheduleUrl))
+            {
+                <a class="btn ghost" href="@Config.CinemaScheduleUrl" target="_blank" rel="noopener">
+                    Horaire · @Config.CinemaName
+                </a>
+            }
+        </div>
+    </section>
+
+    @if (_outings.Count == 0)
+    {
+        <div class="empty-state compact">
+            <div class="empty-emoji">🍿</div>
+            <p class="muted">Aucune sortie enregistrée pour l'instant.</p>
+        </div>
+    }
+    else
+    {
+        <h2 class="section-title">Dernière sortie</h2>
+        <OutingCard Outing="_outings[0]" People="_people" Featured="true" />
+
+        @if (_outings.Count > 1)
+        {
+            <h2 class="section-title">
+                Historique <span class="count">@(_outings.Count - 1)</span>
+            </h2>
+            <div class="history">
+                @foreach (var outing in _outings.Skip(1))
+                {
+                    <OutingCard @key="outing.Id" Outing="outing" People="_people" />
+                }
+            </div>
+        }
+    }
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private List<Person> _people = [];
+    private List<Outing> _outings = [];
+    private NextPayers _next = new(null, null);
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        if (!Outings.IsConfigured)
+        {
+            _loading = false;
+            _error = "Configuration Supabase manquante.";
+            return;
+        }
+
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            // Fetch both lists in parallel
+            var peopleTask = Outings.GetPeopleAsync();
+            var outingsTask = Outings.GetOutingsAsync();
+            await Task.WhenAll(peopleTask, outingsTask);
+
+            _people = peopleTask.Result;
+            _outings = outingsTask.Result;
+            _next = PaymentRotation.Suggest(_people, _outings);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private Person? Find(Guid? id) => id is null ? null : _people.FirstOrDefault(p => p.Id == id);
+}
