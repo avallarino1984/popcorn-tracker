@@ -3,8 +3,8 @@ using PopcornTracker.Core;
 namespace PopcornTracker.Web.Services;
 
 /// <summary>
-/// Data access for people and outings. Rows are scoped to the signed-in user by RLS;
-/// user_id is filled by the database (default auth.uid()), so it is never sent from here.
+/// Data access for people and outings. Every signed-in user shares the same rows (RLS);
+/// user_id only records who created a row and is filled by the database (default auth.uid()).
 /// </summary>
 public sealed class OutingService(SupabaseClient db)
 {
