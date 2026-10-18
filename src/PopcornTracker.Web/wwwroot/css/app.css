@@ -161,7 +161,15 @@ code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-
     transition: transform .12s, opacity .2s, background .2s;
 }
 .btn:active { transform: scale(.97); }
-.btn:disabled { opacity: .45; cursor: not-allowed; }
+/* Solid muted look instead of transparency, so nothing shows through a disabled button. */
+.btn:disabled,
+.btn.primary:disabled {
+    background: var(--surface-2);
+    color: var(--muted);
+    border-color: var(--line);
+    box-shadow: none;
+    cursor: not-allowed;
+}
 .btn.primary { background: var(--butter); color: var(--butter-ink); }
 .btn.ghost { background: transparent; border-color: var(--line); color: var(--text); }
 .btn.danger { background: rgba(255, 107, 107, .12); color: var(--danger); border-color: rgba(255, 107, 107, .3); }
@@ -183,6 +191,19 @@ code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-
 .input:focus { border-color: var(--butter); box-shadow: 0 0 0 3px rgba(255, 201, 77, .18); }
 textarea.input { resize: vertical; }
 input[type="date"].input::-webkit-calendar-picker-indicator { filter: invert(1) opacity(.7); }
+
+/* iOS Safari gives date inputs an intrinsic width that ignores width:100% and overflows the card. */
+input[type="date"].input {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    text-align: left;
+    font-family: var(--body);
+    font-size: 16px; /* 16px+ prevents iOS from zooming on focus */
+}
+input[type="date"].input::-webkit-date-and-time-value { text-align: left; margin: 0; }
 
 .hint { font-size: 14px; color: var(--muted); margin: 8px 0 0; }
 .hint.error { color: var(--danger); }
@@ -409,13 +430,13 @@ input[type="date"].input::-webkit-calendar-picker-indicator { filter: invert(1) 
     font-size: 16px;
 }
 .field-label small { font-family: var(--body); font-weight: 400; color: var(--muted); }
+/* In the normal flow (not sticky) so it never covers the payer chips on a phone. */
 .editor-actions {
-    position: sticky;
-    bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 8px);
     display: flex; gap: 10px;
     padding-top: 8px;
 }
-.editor-actions .btn.primary { min-height: 54px; font-size: 16px; box-shadow: 0 14px 30px -12px rgba(255, 185, 60, .7); }
+.editor-actions .btn.primary { min-height: 54px; font-size: 16px; }
+.editor-actions .btn.primary:not(:disabled) { box-shadow: 0 14px 30px -12px rgba(255, 185, 60, .7); }
 
 /* Person chips */
 .picker { display: flex; flex-wrap: wrap; gap: 8px; }

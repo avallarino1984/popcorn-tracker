@@ -77,6 +77,10 @@ else
         {
             <p class="hint error">@_saveError</p>
         }
+        else if (_movie is null)
+        {
+            <p class="hint">Choisis un film pour pouvoir enregistrer.</p>
+        }
 
         <div class="editor-actions">
             <button type="submit" class="btn primary wide" disabled="@(_saving || _movie is null)">
