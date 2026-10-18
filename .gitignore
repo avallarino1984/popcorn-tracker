@@ -5,3 +5,4 @@ release/
 .vscode/
 *.user
 appsettings.Development.json
+.DS_Store
