@@ -1,6 +1,6 @@
 @page "/"
 @inject OutingService Outings
-@inject AppConfig Config
+@inject CinemaOptions Cinema
 
 <PageTitle>Popcorn Tracker</PageTitle>
 
@@ -46,10 +46,10 @@ else
         </div>
         <div class="next-actions">
             <a class="btn primary" href="sortie/nouvelle">🎬 Nouvelle sortie</a>
-            @if (!string.IsNullOrWhiteSpace(Config.CinemaScheduleUrl))
+            @if (!string.IsNullOrWhiteSpace(Cinema.ScheduleUrl))
             {
-                <a class="btn ghost" href="@Config.CinemaScheduleUrl" target="_blank" rel="noopener">
-                    Horaire · @Config.CinemaName
+                <a class="btn ghost" href="@Cinema.ScheduleUrl" target="_blank" rel="noopener">
+                    Horaire · @Cinema.Name
                 </a>
             }
         </div>
@@ -93,25 +93,14 @@ else
 
     private async Task LoadAsync()
     {
-        if (!Outings.IsConfigured)
-        {
-            _loading = false;
-            _error = "Configuration Supabase manquante.";
-            return;
-        }
-
         _loading = true;
         _error = null;
 
         try
         {
-            // Fetch both lists in parallel
-            var peopleTask = Outings.GetPeopleAsync();
-            var outingsTask = Outings.GetOutingsAsync();
-            await Task.WhenAll(peopleTask, outingsTask);
-
-            _people = peopleTask.Result;
-            _outings = outingsTask.Result;
+            // Sequential on purpose: two parallel calls could both try to renew an expiring session.
+            _people = await Outings.GetPeopleAsync();
+            _outings = await Outings.GetOutingsAsync();
             _next = PaymentRotation.Suggest(_people, _outings);
         }
         catch (Exception ex)

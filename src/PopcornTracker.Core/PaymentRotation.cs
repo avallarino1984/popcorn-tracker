@@ -1,9 +1,4 @@
-using PopcornTracker.Models;
-
-namespace PopcornTracker.Services;
-
-/// <summary>Suggested payers for the next outing.</summary>
-public sealed record NextPayers(Guid? Tickets, Guid? Popcorn);
+namespace PopcornTracker.Core;
 
 /// <summary>
 /// Computes who should pay next. Payments alternate: each item moves
@@ -18,10 +13,11 @@ public static class PaymentRotation
             return new NextPayers(null, null);
         }
 
+        // Outings where nobody paid an item (e.g. free popcorn) do not move that item's rotation.
         var lastTickets = outingsNewestFirst.FirstOrDefault(o => o.TicketsPaidBy is not null)?.TicketsPaidBy;
         var lastPopcorn = outingsNewestFirst.FirstOrDefault(o => o.PopcornPaidBy is not null)?.PopcornPaidBy;
 
-        // With no history, start tickets on the first person and popcorn on the second
+        // With no history, tickets start on the first person and popcorn on the second.
         return new NextPayers(
             NextAfter(people, lastTickets, fallbackIndex: 0),
             NextAfter(people, lastPopcorn, fallbackIndex: 1));
@@ -29,8 +25,8 @@ public static class PaymentRotation
 
     private static Guid NextAfter(IReadOnlyList<Person> people, Guid? previous, int fallbackIndex)
     {
-        var index = -1;
-        for (var i = 0; i < people.Count; i++)
+        int index = -1;
+        for (int i = 0; i < people.Count; i++)
         {
             if (people[i].Id == previous)
             {
@@ -39,6 +35,7 @@ public static class PaymentRotation
             }
         }
 
+        // Unknown previous payer (never paid, or deleted since): fall back to the default start.
         return index < 0
             ? people[fallbackIndex % people.Count].Id
             : people[(index + 1) % people.Count].Id;

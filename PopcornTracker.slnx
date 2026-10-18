@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PopcornTracker.Core/PopcornTracker.Core.csproj" />
+    <Project Path="src/PopcornTracker.Web/PopcornTracker.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PopcornTracker.Core.Tests/PopcornTracker.Core.Tests.csproj" />
+  </Folder>
+</Solution>

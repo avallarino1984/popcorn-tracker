@@ -1,6 +1,7 @@
 @page "/personnes"
 @inject OutingService Outings
 @inject IJSRuntime Js
+@inject SupabaseClient Supabase
 
 <PageTitle>Personnes</PageTitle>
 
@@ -63,6 +64,14 @@ else
     }
 }
 
+<section class="account">
+    <div>
+        <div class="account-label">Connecté</div>
+        <div class="account-email">@Supabase.Email</div>
+    </div>
+    <button type="button" class="btn ghost small" @onclick="Supabase.SignOutAsync">Se déconnecter</button>
+</section>
+
 @code {
     private static readonly string[] Palette =
         ["#ffc94d", "#ff5d73", "#5ad1ff", "#9b8cff", "#5fe3a1", "#ff9f43"];
@@ -88,8 +97,7 @@ else
 
         var color = Palette[_people.Count % Palette.Length];
         var nextOrder = _people.Count == 0 ? 0 : _people.Max(p => p.SortOrder) + 1;
-        var person = new Person { Name = name, Color = color, SortOrder = nextOrder };
-        _people.Add(await Outings.AddPersonAsync(person));
+        _people.Add(await Outings.AddPersonAsync(name, color, nextOrder));
         _newName = string.Empty;
     });
 

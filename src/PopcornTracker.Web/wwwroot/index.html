@@ -4,12 +4,22 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Popcorn Tracker</title>
-    <base href="/" />
     <meta name="theme-color" content="#0e0b12" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Popcorn" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Popcorn Tracker</title>
+    <script>
+        // GitHub Pages serves the app from /<repo>/; everywhere else it runs at the root.
+        (function () {
+            var base = '/';
+            if (location.hostname.endsWith('github.io')) {
+                var first = location.pathname.split('/')[1];
+                if (first) base = '/' + first + '/';
+            }
+            document.write('<base href="' + base + '" />');
+        })();
+    </script>
     <link rel="preload" id="webassembly" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,7 +27,7 @@
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="icon-192.png" />
     <link rel="apple-touch-icon" href="icon-192.png" />
-    <link rel="manifest" href="manifest.webmanifest" />
+    <link href="manifest.webmanifest" rel="manifest" />
     <script type="importmap"></script>
 </head>
 
@@ -36,7 +46,19 @@
     </div>
 
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
-    <script>navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
+    <script>
+        navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
+
+        // When a new version takes over, reload once so the page runs the new code.
+        if (navigator.serviceWorker.controller) {
+            var reloading = false;
+            navigator.serviceWorker.addEventListener('controllerchange', function () {
+                if (reloading) return;
+                reloading = true;
+                location.reload();
+            });
+        }
+    </script>
 </body>
 
 </html>

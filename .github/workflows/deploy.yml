@@ -1,4 +1,6 @@
-name: Deploy to GitHub Pages
+# Builds, tests and deploys the Blazor PWA to GitHub Pages.
+# The site is served from https://<user>.github.io/<repo>/.
+name: Build and deploy
 
 on:
   push:
@@ -10,12 +12,10 @@ permissions:
   pages: write
   id-token: write
 
+# Never cancel a deployment halfway through.
 concurrency:
   group: pages
-  cancel-in-progress: true
-
-env:
-  PROJECT_DIR: src/PopcornTracker
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -25,41 +25,28 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: 10.0.x
 
-      # Must happen BEFORE publish: the service worker manifest stores a hash of
-      # every file, so editing files afterwards would break offline install.
-      - name: Write runtime config from secrets
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
-        run: |
-          jq --arg url "$SUPABASE_URL" --arg key "$SUPABASE_ANON_KEY" --arg tmdb "$TMDB_API_KEY" \
-            '.Supabase.Url = $url | .Supabase.AnonKey = $key | .Tmdb.ApiKey = $tmdb' \
-            "$PROJECT_DIR/wwwroot/appsettings.json" > appsettings.tmp
-          mv appsettings.tmp "$PROJECT_DIR/wwwroot/appsettings.json"
-
-      - name: Set base href for the repository sub-path
-        run: |
-          sed -i 's|<base href="/" />|<base href="/${{ github.event.repository.name }}/" />|' \
-            "$PROJECT_DIR/wwwroot/index.html"
+      # Fail the deployment if the payment rotation breaks.
+      - name: Test
+        run: dotnet test tests/PopcornTracker.Core.Tests
 
       - name: Publish
-        run: dotnet publish "$PROJECT_DIR/PopcornTracker.csproj" -c Release -o release
+        run: dotnet publish src/PopcornTracker.Web -c Release -o publish
 
-      # 404.html lets GitHub Pages serve the SPA for deep links (/sortie/...);
-      # .nojekyll keeps the _framework folder from being ignored.
-      - name: Prepare Pages output
+      # The base path is computed at runtime (index.html + service worker),
+      # so published files are not modified and the service worker integrity checks still pass.
+      - name: Adapt for GitHub Pages
         run: |
-          cp release/wwwroot/index.html release/wwwroot/404.html
-          touch release/wwwroot/.nojekyll
-
-      - uses: actions/configure-pages@v5
+          cd publish/wwwroot
+          # Deep links (e.g. /<repo>/personnes) fall back to the app.
+          cp index.html 404.html
+          # Without this, GitHub Pages (Jekyll) hides the _framework folder.
+          touch .nojekyll
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: release/wwwroot
+          path: publish/wwwroot
 
   deploy:
     needs: build

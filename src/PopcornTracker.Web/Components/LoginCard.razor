@@ -1,0 +1,55 @@
+@inject SupabaseClient Supabase
+
+@* Email + password sign-in; accounts are created by hand in the Supabase dashboard *@
+<div class="login">
+    <div class="login-mark">🍿</div>
+    <h1>Popcorn<em>Tracker</em></h1>
+    <p class="muted">Connecte-toi pour voir vos sorties au cinéma.</p>
+
+    <form class="login-form" @onsubmit="SignInAsync" @onsubmit:preventDefault="true">
+        <input class="input" type="email" placeholder="Courriel" autocomplete="username"
+               @bind="_email" @bind:event="oninput" required />
+        <input class="input" type="password" placeholder="Mot de passe" autocomplete="current-password"
+               @bind="_password" @bind:event="oninput" required />
+
+        @if (_error is not null)
+        {
+            <p class="hint error">@_error</p>
+        }
+
+        <button type="submit" class="btn primary wide" disabled="@(_busy || !CanSubmit)">
+            @(_busy ? "Connexion…" : "Se connecter")
+        </button>
+    </form>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnSignedIn { get; set; }
+
+    private string _email = "";
+    private string _password = "";
+    private string? _error;
+    private bool _busy;
+
+    private bool CanSubmit => !string.IsNullOrWhiteSpace(_email) && _password.Length > 0;
+
+    private async Task SignInAsync()
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            await Supabase.SignInWithPasswordAsync(_email, _password);
+            _password = "";
+            await OnSignedIn.InvokeAsync();
+        }
+        catch (SupabaseException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

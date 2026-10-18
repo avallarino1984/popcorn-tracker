@@ -527,6 +527,40 @@ input[type="date"].input::-webkit-calendar-picker-indicator { filter: invert(1) 
 .add-person { display: flex; gap: 10px; }
 .add-person .input { flex: 1; }
 
+/* ---------- Sign-in ---------- */
+.login {
+    min-height: 100dvh;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    gap: 10px;
+    text-align: center;
+    padding-bottom: 10vh;
+}
+.login-mark {
+    width: 76px; height: 76px;
+    display: grid; place-items: center;
+    background: var(--butter);
+    border-radius: 22px;
+    font-size: 42px;
+    transform: rotate(-6deg);
+    box-shadow: 0 16px 34px -12px rgba(255, 201, 77, .65);
+    margin-bottom: 8px;
+}
+.login h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; }
+.login h1 em { font-style: normal; color: var(--butter); }
+.login-form { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.login-form .btn { min-height: 52px; }
+
+/* ---------- Account ---------- */
+.account {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-top: 12px;
+    padding: 14px 16px;
+    border-radius: var(--radius);
+    border: 1px dashed var(--line);
+}
+.account-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.account-email { font-weight: 600; overflow-wrap: anywhere; }
+
 /* ---------- Blazor error UI ---------- */
 #blazor-error-ui {
     display: none;

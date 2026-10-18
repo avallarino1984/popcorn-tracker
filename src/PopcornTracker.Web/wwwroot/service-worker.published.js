@@ -8,10 +8,10 @@ self.addEventListener('fetch', event => event.respondWith(onFetch(event)));
 
 const cacheNamePrefix = 'offline-cache-';
 const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
-const offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.webmanifest$/];
-const offlineAssetsExclude = [/^service-worker\.js$/];
+const offlineAssetsInclude = [ /\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.webmanifest$/ ];
+const offlineAssetsExclude = [ /^service-worker\.js$/ ];
 
-// Use the SW scope as base so it works under a GitHub Pages sub-path (/popcorn-tracker/)
+// The worker's scope is the app's base path ("/" locally, "/<repo>/" on GitHub Pages).
 const baseUrl = new URL(self.registration.scope);
 const manifestUrlList = self.assetsManifest.assets.map(asset => new URL(asset.url, baseUrl).href);
 
@@ -25,7 +25,7 @@ async function onInstall(event) {
         .map(asset => new Request(asset.url, { integrity: asset.hash, cache: 'no-cache' }));
     await caches.open(cacheName).then(cache => cache.addAll(assetsRequests));
 
-    // Activate the new version right away
+    // Activate the new version right away instead of waiting for every open tab to close.
     self.skipWaiting();
 }
 
@@ -38,6 +38,7 @@ async function onActivate(event) {
         .filter(key => key.startsWith(cacheNamePrefix) && key !== cacheName)
         .map(key => caches.delete(key)));
 
+    // Take control of already open pages so they switch to the new version.
     await self.clients.claim();
 }
 
@@ -46,6 +47,7 @@ async function onFetch(event) {
     if (event.request.method === 'GET') {
         // For all navigation requests, try to serve index.html from cache,
         // unless that request is for an offline resource.
+        // If you need some URLs to be server-rendered, edit the following check to exclude those URLs
         const shouldServeIndexHtml = event.request.mode === 'navigate'
             && !manifestUrlList.some(url => url === event.request.url);
 
@@ -54,6 +56,5 @@ async function onFetch(event) {
         cachedResponse = await cache.match(request);
     }
 
-    // Cross-origin calls (Supabase, TMDB) are never cached and always hit the network
     return cachedResponse || fetch(event.request);
 }
