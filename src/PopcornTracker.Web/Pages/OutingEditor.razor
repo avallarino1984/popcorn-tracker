@@ -30,6 +30,7 @@ else
 
         <section class="field-card">
             <div class="field-label"><span>📅</span> Date</div>
+            @* Future dates are allowed: outings can be planned ahead. *@
             <input class="input" type="date" @bind="_date" required />
         </section>
 
@@ -168,7 +169,6 @@ else
             _saveError = "Choisis un film d'abord.";
             return;
         }
-
         _saving = true;
         _saveError = null;
 

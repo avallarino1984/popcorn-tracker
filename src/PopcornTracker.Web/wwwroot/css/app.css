@@ -292,29 +292,38 @@ input[type="date"].input::-webkit-date-and-time-value { text-align: left; margin
 
 /* ---------- Ticket card ---------- */
 .ticket {
+    /* Width of the tear-off stub on the right; the notches and dashed line sit on its edge. */
+    --stub: 30px;
+    --notch: 9px;
     position: relative;
     display: flex;
     gap: 14px;
     padding: 12px;
-    padding-right: 30px;
+    padding-right: calc(var(--stub) + 12px);
     border-radius: var(--radius);
     background: var(--surface);
     border: 1px solid var(--line);
     overflow: hidden;
     transition: transform .15s, border-color .2s;
-    /* Perforated notches on both sides, like a real ticket */
+    /* Two half-circle notches (top and bottom) on the tear line, like a real ticket.
+       Each gradient covers one half of the card so their transparent circles do not cancel out. */
     -webkit-mask:
-        radial-gradient(circle 9px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
-        radial-gradient(circle 9px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+        radial-gradient(circle var(--notch) at calc(100% - var(--stub)) 0, transparent 98%, #000) top / 100% 51% no-repeat,
+        radial-gradient(circle var(--notch) at calc(100% - var(--stub)) 100%, transparent 98%, #000) bottom / 100% 51% no-repeat;
     mask:
-        radial-gradient(circle 9px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
-        radial-gradient(circle 9px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+        radial-gradient(circle var(--notch) at calc(100% - var(--stub)) 0, transparent 98%, #000) top / 100% 51% no-repeat,
+        radial-gradient(circle var(--notch) at calc(100% - var(--stub)) 100%, transparent 98%, #000) bottom / 100% 51% no-repeat;
 }
 .ticket:active { transform: scale(.985); }
+/* Dashed tear line from notch to notch, plus the stub area to its right. */
 .ticket-stub {
     position: absolute;
-    right: 18px; top: 14px; bottom: 14px;
-    border-right: 2px dashed rgba(255, 255, 255, .12);
+    top: calc(var(--notch) + 4px);
+    bottom: calc(var(--notch) + 4px);
+    right: 0;
+    width: var(--stub);
+    border-left: 2px dashed rgba(255, 255, 255, .16);
+    z-index: 1;
 }
 .ticket-poster {
     flex: none;
@@ -329,7 +338,20 @@ input[type="date"].input::-webkit-date-and-time-value { text-align: left; margin
 .ticket-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .poster-fallback { width: 100%; height: 100%; display: grid; place-items: center; font-size: 26px; background: var(--surface-2); }
 .ticket-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; position: relative; z-index: 1; }
-.ticket-date { font-size: 12px; color: var(--muted); text-transform: capitalize; }
+.ticket-date { font-size: 12px; color: var(--muted); }
+/* French: only the first word is capitalized ("Samedi 31 octobre", not "Samedi 31 Octobre"). */
+.ticket-date::first-letter { text-transform: uppercase; }
+.ticket-badge {
+    align-self: flex-start;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--butter);
+    color: var(--butter-ink);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
 .ticket-title {
     font-family: var(--display);
     font-weight: 700;
@@ -349,7 +371,7 @@ input[type="date"].input::-webkit-date-and-time-value { text-align: left; margin
 .payer-who { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
 
 /* Featured (latest) outing: big poster + blurred backdrop */
-.ticket.featured { padding: 16px; padding-right: 34px; gap: 16px; border-color: rgba(255, 255, 255, .14); }
+.ticket.featured { --stub: 34px; padding: 16px; padding-right: calc(var(--stub) + 14px); gap: 16px; border-color: rgba(255, 255, 255, .14); }
 .ticket.featured .ticket-poster { width: 108px; box-shadow: 0 14px 30px -12px rgba(0, 0, 0, .8); }
 .ticket.featured .ticket-title { font-size: 22px; -webkit-line-clamp: 3; }
 .ticket.featured .ticket-date { font-size: 13px; color: var(--butter); font-weight: 600; }

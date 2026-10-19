@@ -11,6 +11,7 @@ supabase/setup.sql                  Tables + index + RLS (idempotent)
 src/PopcornTracker.Core/            Logique pure, sans dépendance web
   Models.cs                           Person, Outing, MovieChoice, NextPayers
   PaymentRotation.cs                  Suggestion des prochains payeurs
+  OutingSchedule.cs                   Séparation prochaines sorties / historique
 src/PopcornTracker.Web/             Blazor WebAssembly (PWA)
   Program.cs                          Lecture de appsettings.json + DI
   Services/SupabaseClient.cs          Client REST Auth + PostgREST (session, refresh)
@@ -88,6 +89,14 @@ Tri : `people` par `sort_order, created_at` ; `outings` par `date desc, created_
 - Les sorties où un item n'a pas de payeur sont ignorées pour cet item (on remonte plus loin dans l'historique).
 - Sans historique, ou si le dernier payeur a été supprimé : entrées → 1re personne, popcorn → 2e (ou la 1re s'il n'y a qu'une personne).
 - Tests : `tests/PopcornTracker.Core.Tests/PaymentRotationTests.cs` (8 cas).
+
+## Prochaines sorties et historique (`OutingSchedule`)
+
+- `Split(outings, today)` : `Upcoming` = date ≥ aujourd'hui, tri croissant (la plus proche d'abord) ; `Past` = date < aujourd'hui, tri décroissant. À date égale, ordre de création.
+- « Aujourd'hui » = date locale de l'appareil (`DateTime.Today` dans le navigateur).
+- `RelativeLabel` : « Aujourd'hui », « Demain », « Dans N jours » (étiquette des cartes à venir).
+- La rotation (`PaymentRotation`) reçoit toutes les sorties triées par date décroissante, **planifiées comprises** : la suggestion vaut pour la sortie qu'on ajouterait après la dernière déjà planifiée.
+- Tests : `tests/PopcornTracker.Core.Tests/OutingScheduleTests.cs`.
 
 ## TMDB
 

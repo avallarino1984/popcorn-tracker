@@ -17,6 +17,10 @@
     </div>
 
     <div class="ticket-body">
+        @if (Badge is not null)
+        {
+            <span class="ticket-badge">@Badge</span>
+        }
         <div class="ticket-date">@Outing.Date.ToString(Featured ? "dddd d MMMM yyyy" : "d MMM yyyy")</div>
         <div class="ticket-title">@Outing.MovieTitle</div>
 
@@ -40,6 +44,9 @@
     [Parameter, EditorRequired] public IReadOnlyList<Person> People { get; set; } = [];
 
     [Parameter] public bool Featured { get; set; }
+
+    /// <summary>Optional small label shown above the date (e.g. "Dernière").</summary>
+    [Parameter] public string? Badge { get; set; }
 
     private Person? Find(Guid? id) => id is null ? null : People.FirstOrDefault(p => p.Id == id);
 }

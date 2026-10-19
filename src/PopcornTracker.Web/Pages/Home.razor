@@ -31,7 +31,7 @@ else if (_people.Count == 0)
 else
 {
     <section class="next-card">
-        <div class="eyebrow">Prochaine sortie · c'est au tour de</div>
+        <div class="eyebrow">Sortie à ajouter · c'est au tour de</div>
         <div class="next-grid">
             <div class="next-item">
                 <span class="next-emoji">🎟️</span>
@@ -59,26 +59,37 @@ else
     {
         <div class="empty-state compact">
             <div class="empty-emoji">🍿</div>
-            <p class="muted">Aucune sortie enregistrée pour l'instant.</p>
+            <p class="muted">Aucune sortie pour l'instant. Planifie la prochaine avec « Nouvelle sortie ».</p>
         </div>
     }
-    else
-    {
-        <h2 class="section-title">Dernière sortie</h2>
-        <OutingCard Outing="_outings[0]" People="_people" Featured="true" />
 
-        @if (_outings.Count > 1)
-        {
-            <h2 class="section-title">
-                Historique <span class="count">@(_outings.Count - 1)</span>
-            </h2>
-            <div class="history">
-                @foreach (var outing in _outings.Skip(1))
-                {
-                    <OutingCard @key="outing.Id" Outing="outing" People="_people" />
-                }
-            </div>
-        }
+    @if (_schedule.Upcoming.Count > 0)
+    {
+        @* Planned outings (today and later), nearest first; the next one is shown bigger. *@
+        <h2 class="section-title">
+            Prochaines sorties <span class="count">@_schedule.Upcoming.Count</span>
+        </h2>
+        <div class="history">
+            @for (var i = 0; i < _schedule.Upcoming.Count; i++)
+            {
+                var outing = _schedule.Upcoming[i];
+                <OutingCard @key="outing.Id" Outing="outing" People="_people"
+                            Featured="@(i == 0)" Badge="@OutingSchedule.RelativeLabel(outing.Date, _today)" />
+            }
+        </div>
+    }
+
+    @if (_schedule.Past.Count > 0)
+    {
+        <h2 class="section-title">
+            Historique <span class="count">@_schedule.Past.Count</span>
+        </h2>
+        <div class="history">
+            @foreach (var outing in _schedule.Past)
+            {
+                <OutingCard @key="outing.Id" Outing="outing" People="_people" />
+            }
+        </div>
     }
 }
 
@@ -88,6 +99,10 @@ else
     private List<Person> _people = [];
     private List<Outing> _outings = [];
     private NextPayers _next = new(null, null);
+    private ScheduledOutings _schedule = new([], []);
+
+    // Local date of the device; decides what counts as upcoming vs history.
+    private DateOnly _today = DateOnly.FromDateTime(DateTime.Today);
 
     protected override Task OnInitializedAsync() => LoadAsync();
 
@@ -101,6 +116,12 @@ else
             // Sequential on purpose: two parallel calls could both try to renew an expiring session.
             _people = await Outings.GetPeopleAsync();
             _outings = await Outings.GetOutingsAsync();
+
+            _today = DateOnly.FromDateTime(DateTime.Today);
+            _schedule = OutingSchedule.Split(_outings, _today);
+
+            // Outings come newest date first, planned ones included, so the suggestion
+            // is for the outing that would be added after the last one already planned.
             _next = PaymentRotation.Suggest(_people, _outings);
         }
         catch (Exception ex)
