@@ -41,7 +41,7 @@ Le projet reprend volontairement **la même approche que mon autre app CaloriesT
 
 ## Fonctionnalités actuelles
 
-- **Accueil** : carte « Sortie à ajouter · c'est au tour de » (qui paie les entrées / le popcorn la prochaine fois), puis deux listes en cartes « billet de cinéma » :
+- **Accueil** : grande carte « Prochaine sortie » : les payeurs de la sortie planifiée la plus proche, ou la suggestion de rotation si rien n'est planifié, puis deux listes en cartes « billet de cinéma » :
   - **Prochaines sorties** : aujourd'hui et futures, la plus proche en haut (en grand), étiquette « Aujourd'hui / Demain / Dans N jours » ;
   - **Historique** : sorties passées, la plus récente en haut. Une sortie planifiée passe dans l'historique le lendemain de sa date.
 - **Nouvelle / modifier une sortie** : date (passée, aujourd'hui ou **future** : on peut planifier des sorties à l'avance), film (à l'affiche, recherche TMDB, ou titre manuel), payeurs pré-remplis par la rotation, note. Suppression.

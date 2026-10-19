@@ -95,7 +95,8 @@ Tri : `people` par `sort_order, created_at` ; `outings` par `date desc, created_
 - `Split(outings, today)` : `Upcoming` = date ≥ aujourd'hui, tri croissant (la plus proche d'abord) ; `Past` = date < aujourd'hui, tri décroissant. À date égale, ordre de création.
 - « Aujourd'hui » = date locale de l'appareil (`DateTime.Today` dans le navigateur).
 - `RelativeLabel` : « Aujourd'hui », « Demain », « Dans N jours » (étiquette des cartes à venir).
-- La rotation (`PaymentRotation`) reçoit toutes les sorties triées par date décroissante, **planifiées comprises** : la suggestion vaut pour la sortie qu'on ajouterait après la dernière déjà planifiée.
+- **Grande carte de l'accueil** : `PaymentRotation.ForNextOuting(people, schedule)` → payeurs de la sortie planifiée la plus proche ; un item sans payeur, ou l'absence de sortie planifiée, retombe sur la rotation calculée sur l'historique seul.
+- **Pré-remplissage du formulaire « Nouvelle sortie »** : `PaymentRotation.Suggest` sur toutes les sorties, **planifiées comprises** → payeurs de la sortie qu'on ajouterait après la dernière déjà planifiée.
 - Tests : `tests/PopcornTracker.Core.Tests/OutingScheduleTests.cs`.
 
 ## TMDB

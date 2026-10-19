@@ -31,7 +31,16 @@ else if (_people.Count == 0)
 else
 {
     <section class="next-card">
-        <div class="eyebrow">Sortie à ajouter · c'est au tour de</div>
+        <div class="eyebrow">
+            @if (_schedule.Upcoming.Count > 0)
+            {
+                @($"Prochaine sortie · {OutingSchedule.RelativeLabel(_schedule.Upcoming[0].Date, _today)} · qui paie")
+            }
+            else
+            {
+                @("Prochaine sortie · c'est au tour de")
+            }
+        </div>
         <div class="next-grid">
             <div class="next-item">
                 <span class="next-emoji">🎟️</span>
@@ -120,9 +129,8 @@ else
             _today = DateOnly.FromDateTime(DateTime.Today);
             _schedule = OutingSchedule.Split(_outings, _today);
 
-            // Outings come newest date first, planned ones included, so the suggestion
-            // is for the outing that would be added after the last one already planned.
-            _next = PaymentRotation.Suggest(_people, _outings);
+            // The hero card shows the nearest planned outing's payers, or the rotation if nothing is planned.
+            _next = PaymentRotation.ForNextOuting(_people, _schedule);
         }
         catch (Exception ex)
         {

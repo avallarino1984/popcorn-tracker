@@ -81,6 +81,40 @@ public class PaymentRotationTests
     }
 
     [Fact]
+    public void ForNextOuting_UsesPlannedOutingPayers()
+    {
+        // Past: Alexandra tickets, Andres popcorn. Planned: Andres tickets, Alexandra popcorn.
+        var schedule = new ScheduledOutings(Upcoming: [Trip(Andres, Alexandra)], Past: [Trip(Alexandra, Andres)]);
+
+        var next = PaymentRotation.ForNextOuting([Andres, Alexandra], schedule);
+
+        Assert.Equal(Andres.Id, next.Tickets);
+        Assert.Equal(Alexandra.Id, next.Popcorn);
+    }
+
+    [Fact]
+    public void ForNextOuting_PlannedWithoutPayers_FallsBackToHistoryRotation()
+    {
+        var schedule = new ScheduledOutings(Upcoming: [Trip(null, null)], Past: [Trip(Alexandra, Andres)]);
+
+        var next = PaymentRotation.ForNextOuting([Andres, Alexandra], schedule);
+
+        Assert.Equal(Andres.Id, next.Tickets);
+        Assert.Equal(Alexandra.Id, next.Popcorn);
+    }
+
+    [Fact]
+    public void ForNextOuting_NothingPlanned_UsesHistoryRotation()
+    {
+        var schedule = new ScheduledOutings(Upcoming: [], Past: [Trip(Andres, Alexandra)]);
+
+        var next = PaymentRotation.ForNextOuting([Andres, Alexandra], schedule);
+
+        Assert.Equal(Alexandra.Id, next.Tickets);
+        Assert.Equal(Andres.Id, next.Popcorn);
+    }
+
+    [Fact]
     public void DeletedPreviousPayer_FallsBackToDefaultStart()
     {
         var removed = new Person { Id = Guid.NewGuid(), Name = "Ancien" };

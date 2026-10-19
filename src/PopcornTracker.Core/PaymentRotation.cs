@@ -23,6 +23,25 @@ public static class PaymentRotation
             NextAfter(people, lastPopcorn, fallbackIndex: 1));
     }
 
+    /// <summary>
+    /// Who pays at the next outing, as shown on the home screen.
+    /// If an outing is already planned, its own payers win (an item nobody was set for falls back
+    /// to the rotation over past outings). With nothing planned, it is the rotation over past outings.
+    /// </summary>
+    public static NextPayers ForNextOuting(IReadOnlyList<Person> people, ScheduledOutings schedule)
+    {
+        var fromHistory = Suggest(people, schedule.Past);
+        if (schedule.Upcoming.Count == 0)
+        {
+            return fromHistory;
+        }
+
+        var next = schedule.Upcoming[0];
+        return new NextPayers(
+            next.TicketsPaidBy ?? fromHistory.Tickets,
+            next.PopcornPaidBy ?? fromHistory.Popcorn);
+    }
+
     private static Guid NextAfter(IReadOnlyList<Person> people, Guid? previous, int fallbackIndex)
     {
         int index = -1;
